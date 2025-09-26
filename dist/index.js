@@ -259,11 +259,22 @@ function buildReport(params) {
 }
 async function run() {
     try {
-        if (!github.context.payload.pull_request) {
-            throw new Error("This action must run on a pull_request event");
+        const pullRequest = github.context.payload.pull_request;
+        if (!pullRequest) {
+            core.info("No pull request context detected. Skipping Scale Sentry AI analysis.");
+            core.setOutput("report", "Skipped: Scale Sentry AI only analyses pull request diffs.");
+            return;
         }
-        const githubToken = core.getInput("github-token", { required: true });
-        const openaiApiKey = core.getInput("openai-api-key", { required: true });
+        const githubToken = core.getInput("github-token").trim();
+        if (!githubToken) {
+            core.setFailed("Missing required input 'github-token'. Provide one via the workflow input (for example secrets.GITHUB_TOKEN).");
+            return;
+        }
+        const openaiApiKey = core.getInput("openai-api-key").trim();
+        if (!openaiApiKey) {
+            core.setFailed("Missing required input 'openai-api-key'. Supply an OpenAI API key secret (for example secrets.OPENAI_API_KEY).");
+            return;
+        }
         const targetLanguage = core.getInput("target-language") || "TypeScript";
         const trafficProfile = core.getInput("traffic-profile") || "1k-100k requests per second";
         const openaiModel = core.getInput("openai-model") || "gpt-4o";
@@ -281,7 +292,7 @@ async function run() {
         if (Number.isNaN(temperature) || temperature < 0 || temperature > 1) {
             throw new Error("openai-temperature must be between 0 and 1");
         }
-        const pullNumber = github.context.payload.pull_request.number;
+        const pullNumber = pullRequest.number;
         const octokit = github.getOctokit(githubToken);
         core.info(`Fetching diff for PR #${pullNumber}...`);
         const rawDiff = await fetchPullRequestDiff(octokit, pullNumber);
