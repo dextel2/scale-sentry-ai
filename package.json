@@ -1,23 +1,24 @@
 {
-    "name":  "@dextel2/scale-sentry-ai",
-    "version":  "1.0.0",
-    "description":  "GitHub Action that uses OpenAI to forecast scalability risks from pull request diffs.",
-    "main":  "dist/index.js",
-    "license":  "MIT",
-    "scripts":  {
-                    "build":  "tsc --project tsconfig.json && ncc build lib/index.js -o dist --source-map"
-                },
-    "dependencies":  {
-                         "@actions/core":  "^1.11.1",
-                         "@actions/github":  "^6.0.0"
-                     },
-    "devDependencies":  {
-                            "@types/node":  "^20.16.5",
-                            "typescript":  "^5.6.2",
-                            "@vercel/ncc":  "^0.38.1"
-                        },
-    "engines":  {
-                    "node":  "\u003e=18"
-                }
+  "name": "@dextel2/scale-sentry-ai",
+  "version": "1.0.0",
+  "description": "GitHub Action that uses OpenAI to forecast scalability risks from pull request diffs.",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc --project tsconfig.json && ncc build lib/index.js -o dist --source-map",
+    "pretest": "npm run build",
+    "test": "node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "typescript": "^5.6.2",
+    "@vercel/ncc": "^0.38.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
-
