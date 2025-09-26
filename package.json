@@ -1,5 +1,5 @@
 {
-  "name": "@karankeyash/scale-sentry-ai",
+  "name": "@dextel2/scale-sentry-ai",
   "version": "1.0.0",
   "description": "GitHub Action that uses OpenAI to forecast scalability risks from pull request diffs.",
   "main": "dist/index.js",
