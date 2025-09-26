@@ -1,23 +1,25 @@
 ﻿# 🚀 Scale Sentry AI
 
-_Predict scalability blowups before they happen._ 🔮
+[![GitHub stars](https://img.shields.io/github/stars/dextel2/scale-sentry-ai?style=flat-square)](https://github.com/dextel2/scale-sentry-ai/stargazers) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=flat-square) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black&style=flat-square) [![CI](https://github.com/dextel2/scale-sentry-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/dextel2/scale-sentry-ai/actions/workflows/ci.yml) ![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square) ![Powered by OpenAI](https://img.shields.io/badge/Powered%20by-OpenAI-412991?logo=openai&logoColor=white&style=flat-square)
+
+*Forecast scalability problems caused by code changes before they reach production.*
 
 ## ❤️ Why You Will Love It
 
-- 🔎 Spots risky database access, heavy loops, and new endpoints the moment a PR opens.
-- 🤖 Summons OpenAI (`gpt-4o` by default) for simulated load analysis up to your chosen traffic profile.
-- 📝 Prints developer-friendly Markdown that you can ship straight into pull request reviews.
-- 🧰 Works out of the box for TypeScript/Next.js stacks, yet stays flexible for any server runtime.
+- 🔍 Highlights risky database operations, heavy loops, and new endpoints as soon as a pull request opens.
+- 🤖 Uses OpenAI (defaults to `gpt-4o`) to simulate realistic load profiles without staging infrastructure.
+- 📝 Produces reviewer-ready Markdown with predicted bottlenecks, thresholds, and recommended fixes.
+- 🧰 Fits TypeScript/Next.js stacks out of the box and adapts easily to other backends.
 
-> Scale Sentry AI turns raw diffs into a battle plan for surviving launch day traffic.
+> Scale Sentry AI turns raw diffs into a deploy-ready performance assessment.
 
-## 🔍 What Happens Under The Hood
+## 🔍 How It Works
 
-1. 📥 Fetch the pull request diff with GitHub's API.
-2. 🚨 Run heuristic detectors for hotspots (database, external calls, CPU, concurrency, loops, API routes).
-3. 🧠 Craft a focused prompt that includes the heuristics, traffic assumptions, and truncated diff.
-4. ✉️ Ask OpenAI for a structured Markdown report.
-5. 💬 Post the result as a PR comment and job summary, and expose it via the `report` output.
+1. 📥 Fetch the pull request diff via the GitHub API.
+2. 🚨 Run heuristics to spotlight hotspots (database calls, external requests, CPU loops, concurrency, etc.).
+3. 🧠 Craft a prompt that blends signals, traffic assumptions, and diff context.
+4. ✉️ Call the OpenAI chat completions API for a structured analysis.
+5. 💬 Publish the Markdown report and expose it as an action output.
 
 ```mermaid
 flowchart TD
@@ -32,7 +34,7 @@ flowchart TD
 
 ## ⚡ Quickstart Playbook
 
-### 🛠 Option A — Inside This Repository
+### 🛠 Option A - Inside This Repository
 
 ```yaml
 name: Scalability Simulator
@@ -62,10 +64,10 @@ jobs:
           traffic-profile: 1k-100k requests per second
 ```
 
-### 🌍 Option B — Share With The World
+### 🌍 Option B - Share With The World
 
-1. ✅ Ensure `dist/` is committed, then tag a release: `git tag v1 && git push origin v1`.
-2. 📦 Ask consumers to drop this step into their workflow:
+1. ✅ Commit the bundled `dist/` output and tag a release (for example `git tag v1 && git push origin v1`).
+2. 📦 Consumers reference the tag in their workflow:
    ```yaml
    - name: Run Scale Sentry AI
      uses: dextel2/scale-sentry-ai@v1
@@ -75,52 +77,64 @@ jobs:
        target-language: TypeScript
        traffic-profile: 1k-100k requests per second
    ```
-3. 🔐 Remind them to create an `OPENAI_API_KEY` repository secret and confirm the GitHub token can write PR comments.
+3. 🔐 Remind adopters to add an `OPENAI_API_KEY` repository secret and confirm the GitHub token can post comments.
 
 ## 🧾 Configuration Cheat Sheet
 
 | Input                | Required | Default                       | What It Controls                                                                           |
 | -------------------- | -------- | ----------------------------- | ------------------------------------------------------------------------------------------ |
-| `github-token`       | yes      | -                             | Auth for GitHub API calls and (optionally) commenting.                                     |
-| `openai-api-key`     | yes      | -                             | Secret used to call the OpenAI Chat Completions API.                                       |
-| `openai-model`       | no       | `gpt-4o`                      | Which OpenAI model to query. Try `gpt-4o-mini` for faster, cheaper runs.                   |
-| `openai-max-tokens`  | no       | `900`                         | Completion budget. Drop this if you are cost-sensitive or using larger diffs.              |
-| `openai-temperature` | no       | `0.2`                         | Creativity dial. Keep low for deterministic advice.                                        |
-| `target-language`    | no       | `TypeScript`                  | Hint about your stack to steer the model.                                                  |
-| `traffic-profile`    | no       | `1k-100k requests per second` | Range of load to simulate in the analysis narrative.                                       |
-| `post-comment`       | no       | `true`                        | Set to `false` to skip PR comments and consume the report programmatically.                |
-| `write-job-summary`  | no       | `true`                        | Tuck the report into the workflow run summary for easy viewing.                            |
+| `github-token`       | yes      | -                             | Authorisation for GitHub API calls and optional PR commenting.                             |
+| `openai-api-key`     | yes      | -                             | Secret used to call the OpenAI chat completions endpoint.                                   |
+| `openai-model`       | no       | `gpt-4o`                      | Which OpenAI model to query (for example `gpt-4o-mini` for cheaper runs).                  |
+| `openai-max-tokens`  | no       | `900`                         | Completion budget; reduce to control spend.                                                |
+| `openai-temperature` | no       | `0.2`                         | Creativity vs. determinism balance for the model response.                                 |
+| `target-language`    | no       | `TypeScript`                  | Hint about your codebase to steer the analysis tone.                                       |
+| `traffic-profile`    | no       | `1k-100k requests per second` | Desired load envelope for simulation commentary.                                           |
+| `post-comment`       | no       | `true`                        | Disable to skip PR comments and consume outputs only.                                      |
+| `write-job-summary`  | no       | `true`                        | Disable to prevent adding the report to the job summary.                                   |
 
-### 📤 Output
+### Output
 
 | Name     | Description                                 |
 | -------- | ------------------------------------------- |
-| `report` | Full Markdown body generated by the analysis |
+| `report` | Markdown body generated by the AI analysis |
 
-## 🗒 Field Notes For Better Insights
+## 🔑 How to Obtain a GitHub Token
 
-- ✂️ Large diffs are trimmed to 12,000 characters; the report calls out truncation so reviewers know the context was shortened.
-- 🎯 Heuristics are intentionally noisy. Tune `HEURISTIC_CHECKS` in `src/index.ts` to focus on the patterns that matter most in your stack (Prisma, Drizzle, Django ORM, custom SDKs, etc.).
-- 🔗 The structured Markdown response enables downstream automation (Slack alerts, Jira tickets, or dashboards). Pipe the `report` output into whatever you want next.
+1. Open **Settings -> Developer settings -> Personal access tokens -> Tokens (classic)**.
+2. Click **Generate new token**, name it (for example `scale-sentry-ai`), and set an expiry.
+3. Grant `repo` scope (or `public_repo` for public repositories). Add `workflow` if the action must trigger other workflows.
+4. Generate the token and copy it immediately; GitHub will not show it again.
+5. Create or reuse a repository secret named `GITHUB_TOKEN` if you need custom permissions.
+6. Pass the secret into the workflow (`github-token: ${{ secrets.GITHUB_TOKEN }}`).
+
+> Most scenarios work with GitHub's automatically provided `${{ secrets.GITHUB_TOKEN }}`. Create a personal token only when you need elevated privileges (cross-fork commenting, triggering workflows, accessing private repositories, etc.).
+
+## 🗒 Field Notes for Better Insights
+
+- ✂️ Diffs are truncated to 12,000 characters; the report explicitly flags when truncation happens.
+- 🎯 Heuristics are intentionally opinionated—tune `HEURISTIC_CHECKS` in `src/index.ts` for your stack.
+- 🔗 The Markdown output is designed for downstream automation (Slack messages, Jira tickets, dashboards, etc.).
 
 ## 🧪 Local Development Loop
 
-1. 📦 Install dependencies: `npm install`.
-2. 🏗 Build the action: `npm run build` (writes to `dist`).
-3. 👀 Use `npm run build -- --watch` for fast iteration.
-4. ✅ Add tests or validation scripts in `src/` if you extend the heuristics or prompt assembly.
+1. 📦 Install dependencies with `npm install`.
+2. 🏗 Build the action via `npm run build` (bundled output lands in `dist/`).
+3. 👀 Use `npm run build -- --watch` during active editing.
+4. ✅ Extend tests or heuristics and re-run `npm test` before committing.
 
-## 🛡 Safety And Cost Guardrails
+## 🛡 Safety and Cost Guardrails
 
-- 🔐 Never check secrets into git. Use GitHub repo or org secrets, and rotate often.
-- 💸 Cap `openai-max-tokens` and prefer `gpt-4o-mini` when you just need quick signal.
-- 🙅 Set `post-comment: "false"` if your repository enforces manual reviews.
-- 🧾 Logs intentionally omit diff content and OpenAI payloads to keep reviews clean and compliant.
+- 🔐 Never commit secrets—store them in repository or organisation secrets and rotate regularly.
+- 💸 Cap `openai-max-tokens` or use `gpt-4o-mini` to control OpenAI spend.
+- 🙅 Set `post-comment: "false"` if your review process requires manual approval before commenting.
+- 🧾 Logs intentionally omit diff content and OpenAI payloads to avoid leaking sensitive data.
 
 ## 🌟 Share Your Wins
 
-- 🧬 Ship a fork tailored for Python, Go, or JVM stacks.
-- 📊 Feed real load-test telemetry back into the prompt for hybrid AI + empirical reports.
-- 🤝 Open an issue or PR with new heuristics so the community gets smarter with you.
+- 🧬 Fork for other ecosystems (Python, Go, JVM) with stack-specific heuristics.
+- 📊 Feed real load-test telemetry into the prompt for hybrid AI plus empirical reports.
+- 🤝 Open issues or pull requests with new heuristics so the community benefits.
 
-Ready to ship? Commit `dist/`, tag a release, and let Scale Sentry AI guard your deploy runway. 🚦
+Ready to ship? Commit `dist/`, tag a release, and let Scale Sentry AI guard your deploy runway.
+
