@@ -1,25 +1,43 @@
-# Known Issues
+Here’s a rewritten and more engaging version of your markdown with relevant emojis added:
 
-This document tracks limitations and rough edges that contributors should be aware of.
+```markdown
+# ⚠️ Known Issues
 
-## 1. Diff Truncation
-- Diff content is truncated at 12,000 characters before it is sent to OpenAI.
-- Large pull requests may lose context, which can reduce confidence in the generated report.
-- Workaround: Split massive changes into smaller PRs or raise the limit (with cost considerations).
+This document tracks current limitations and rough edges contributors should be aware of.  
 
-## 2. Heuristic Noise
-- Current heuristics may flag benign changes, especially in files with many utility functions.
-- False positives can make the report feel repetitive.
-- Planned fix: incorporate file-level weighting or historical profiling data.
+---
 
-## 3. External Service Dependencies
-- Calls to OpenAI depend on the external API being available and the secret being valid.
-- Network hiccups or quota exhaustion cause the Action to fail.
-- Future enhancement: retry mechanism with exponential backoff.
+## 1. 📝 Diff Truncation
+- Diff content is **truncated at 12,000 characters** before being sent to OpenAI.
+- Large pull requests may **lose context**, reducing confidence in the generated report.
+- 💡 **Workaround:** Split massive changes into smaller PRs or increase the limit (note: may increase cost).
 
-## 4. Cost Visibility
-- Reports do not currently include the estimated token usage or cost per run.
-- Users may have trouble budgeting for heavy PR traffic.
-- Idea: add optional logging of token counts via the `usage` field returned by OpenAI.
+---
 
-Feel free to file an issue or open a PR if you have ideas for addressing any of the above.
+## 2. 🔍 Heuristic Noise
+- Current heuristics may **flag benign changes**, especially in files with many utility functions.
+- False positives can make reports feel **repetitive or noisy**.
+- 🛠 **Planned fix:** Incorporate file-level weighting or historical profiling data.
+
+---
+
+## 3. 🌐 External Service Dependencies
+- Calls to OpenAI **rely on the external API** and a valid secret.
+- Network issues or quota exhaustion may cause the Action to **fail**.
+- ⚡ **Future enhancement:** Implement a **retry mechanism with exponential backoff**.
+
+---
+
+## 4. 💰 Cost Visibility
+- Reports **do not show estimated token usage or cost per run**.
+- Users may have trouble **budgeting for high PR traffic**.
+- 💡 **Idea:** Add optional logging of token counts using the `usage` field from OpenAI responses.
+
+---
+
+Feel free to **file an issue** or **open a PR** if you have suggestions for addressing any of the above! 🚀
+```
+
+I can also make a **more playful, “friendly AI assistant” version** with extra emojis and conversational tone if you want it to feel less formal.
+
+Do you want me to do that?
