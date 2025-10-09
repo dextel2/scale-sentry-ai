@@ -13,8 +13,8 @@ jobs:
     name: Analyze scalability
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
+      contents: write
+      pull-requests: write
       issues: write
     steps:
                 
