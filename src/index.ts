@@ -1,11 +1,17 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
+/**
+ * A contiguous collection of added lines captured from a diff.
+ */
 interface Snippet {
   location: string | null;
   lines: string[];
 }
 
+/**
+ * Aggregated metadata derived from analysing a single file within the diff.
+ */
 interface FileAnalysis {
   path: string;
   addedLines: number;
@@ -13,20 +19,38 @@ interface FileAnalysis {
   snippets: Snippet[];
 }
 
+/**
+ * Summary of the overall diff analysis, including highlighted heuristics.
+ */
 interface AnalysisSummary {
   files: FileAnalysis[];
   highlightedTags: string[];
 }
 
+/**
+ * Minimal representation of a chat completion message exchanged with OpenAI.
+ */
 interface OpenAIChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
+/**
+ * Maximum number of diff characters to forward to the model.
+ */
 const MAX_DIFF_CHARACTERS = 12000;
+/**
+ * Maximum number of snippets to retain for each analysed file.
+ */
 const MAX_SNIPPETS_PER_FILE = 3;
+/**
+ * Maximum number of lines captured for a single snippet.
+ */
 const MAX_LINES_PER_SNIPPET = 8;
 
+/**
+ * Heuristic detectors used to surface high-risk changes within the diff.
+ */
 const HEURISTIC_CHECKS: Array<{
   id: string;
   description: string;
@@ -73,6 +97,12 @@ const HEURISTIC_CHECKS: Array<{
   },
 ];
 
+/**
+ * Analyses a unified diff to count added lines, extract snippets, and surface heuristics.
+ *
+ * @param diff - Unified diff content, typically in Git format.
+ * @returns Structured summary of the diff emphasising risky changes.
+ */
 function analyseDiff(diff: string): AnalysisSummary {
   const files = new Map<string, FileAnalysis>();
   let currentFile: FileAnalysis | null = null;
@@ -169,6 +199,12 @@ function analyseDiff(diff: string): AnalysisSummary {
   return { files: fileAnalyses, highlightedTags: Array.from(highlighted) };
 }
 
+/**
+ * Formats the analysis summary into markdown suitable for the prompting context.
+ *
+ * @param summary - Aggregated diff summary to convert into human-readable text.
+ * @returns Markdown string that highlights files, signals, and snippets.
+ */
 function buildHeuristicSummary(summary: AnalysisSummary): string {
   if (summary.files.length === 0) {
     return "No added lines detected in the diff.";
@@ -196,6 +232,13 @@ function buildHeuristicSummary(summary: AnalysisSummary): string {
     .join("\n\n");
 }
 
+/**
+ * Indents every line in the provided text by the specified number of spaces.
+ *
+ * @param text - The text block to indent.
+ * @param spaces - Number of spaces to prefix each line with.
+ * @returns The indented text block.
+ */
 function indentText(text: string, spaces: number): string {
   const pad = " ".repeat(spaces);
   return text
@@ -204,6 +247,12 @@ function indentText(text: string, spaces: number): string {
     .join("\n");
 }
 
+/**
+ * Constructs the chat completion prompt for the OpenAI API.
+ *
+ * @param params - Prompt configuration, including language, traffic profile, and diff details.
+ * @returns Ordered list of chat messages describing the task.
+ */
 function buildPrompt(params: {
   language: string;
   trafficProfile: string;
@@ -251,6 +300,13 @@ function buildPrompt(params: {
   return [systemMessage, userMessage];
 }
 
+/**
+ * Retrieves the diff for a pull request using the provided Octokit client.
+ *
+ * @param octokit - Authenticated Octokit instance.
+ * @param pullNumber - Pull request number to fetch.
+ * @returns Raw diff text returned by the GitHub API.
+ */
 async function fetchPullRequestDiff(octokit: ReturnType<typeof github.getOctokit>, pullNumber: number) {
   const response = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
     ...github.context.repo,
@@ -260,6 +316,13 @@ async function fetchPullRequestDiff(octokit: ReturnType<typeof github.getOctokit
   return typeof response.data === "string" ? response.data : String(response.data ?? "");
 }
 
+/**
+ * Calls the OpenAI chat completions endpoint with the prepared prompt.
+ *
+ * @param params - Parameters required to invoke the OpenAI API.
+ * @returns Assistant response content trimmed for whitespace.
+ * @throws If the API responds with a non-OK status or lacks textual content.
+ */
 async function callOpenAI(params: {
   apiKey: string;
   model: string;
@@ -296,6 +359,12 @@ async function callOpenAI(params: {
   return content.trim();
 }
 
+/**
+ * Builds the final markdown report that will be posted or surfaced in outputs.
+ *
+ * @param params - Report construction parameters including metadata and model output.
+ * @returns Markdown report summarising model findings.
+ */
 function buildReport(params: {
   pullNumber: number;
   repoFullName: string;
@@ -309,6 +378,9 @@ function buildReport(params: {
   return `${header}\n\n${content}\n${footer}`;
 }
 
+/**
+ * Entrypoint for the GitHub Action that orchestrates diff retrieval, analysis, and reporting.
+ */
 async function run(): Promise<void> {
   try {
     const pullRequest = github.context.payload.pull_request;
