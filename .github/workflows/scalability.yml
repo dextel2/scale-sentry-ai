@@ -17,8 +17,18 @@ jobs:
       pull-requests: read
       issues: write
     steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+      
       - name: Checkout
         uses: actions/checkout@v4
+      
       - name: Run Scale Sentry AI
         uses: ./
         with:
