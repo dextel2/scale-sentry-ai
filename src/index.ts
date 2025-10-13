@@ -6,53 +6,122 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 /**
  * A contiguous collection of added lines captured from a diff.
+ *
+ * This structure represents a small excerpt of newly added lines in a file
+ * along with the unified-diff location header (the hunk header such as
+ * `@@ -1,6 +1,9 @@`). The `location` may be `null` if not known.
  */
 interface Snippet {
+  /**
+   * The unified diff hunk header (for example `@@ -10,7 +10,9 @@`) or `null`
+   * when the location is not available.
+   */
   location: string | null;
+  /**
+   * The lines that were added in this snippet. Each string is a single
+   * source line without the leading `+` character.
+   */
   lines: string[];
 }
 
 /**
  * Aggregated metadata derived from analysing a single file within the diff.
+ *
+ * Contains the file path, the number of added lines, a list of heuristic
+ * descriptions that were triggered for this file, and up to `MAX_SNIPPETS_PER_FILE`
+ * `Snippet` instances extracted from the added lines.
  */
 interface FileAnalysis {
+  /**
+   * The repository-relative path to the file that was analysed (e.g. "src/index.ts").
+   */
   path: string;
+  /**
+   * The number of added lines recorded for this file in the diff passed to the analyser.
+   */
   addedLines: number;
+  /**
+   * A list of human-readable heuristic descriptions that matched any added line
+   * in the file. Each entry corresponds to a triggered `HEURISTIC_CHECKS` rule.
+   */
   heuristics: string[];
+  /**
+   * A small collection of `Snippet` objects providing examples of changed lines.
+   */
   snippets: Snippet[];
 }
 
 /**
  * Summary of the overall diff analysis, including highlighted heuristics.
+ *
+ * This object aggregates results for all files analysed and also returns a
+ * de-duplicated list of heuristic descriptions that were triggered across the
+ * entire diff.
  */
 interface AnalysisSummary {
+  /**
+   * Analysed file summaries with added lines and triggered heuristics.
+   */
   files: FileAnalysis[];
+  /**
+   * A de-duplicated list of heuristic descriptions highlighted across all files.
+   */
   highlightedTags: string[];
 }
 
 /**
  * Minimal representation of a chat completion message exchanged with OpenAI.
+ *
+ * This mirrors the typical role/content pair used by chat-based language models:
+ * - `system`: instructions that set overall behaviour,
+ * - `user`: user-level prompt content,
+ * - `assistant`: model-provided content.
  */
 interface OpenAIChatMessage {
+  /**
+   * The role of the message within the chat.
+   */
   role: "system" | "user" | "assistant";
+  /**
+   * The textual content of the message.
+   */
   content: string;
 }
 
 /**
  * Maximum number of diff characters to forward to the model.
+ *
+ * This is used to truncate excessively large diffs before sending them to the
+ * language model so prompts remain within token/size constraints.
  */
 const MAX_DIFF_CHARACTERS = 12000;
+
 /**
  * Maximum number of snippets to retain for each analysed file.
+ *
+ * When the analyser finds more added lines than can fit into the snippet
+ * budget, only this many snippet containers will be kept.
  */
 const MAX_SNIPPETS_PER_FILE = 3;
+
 /**
  * Maximum number of lines captured for a single snippet.
+ *
+ * Ensures that each snippet remains compact and readable in the generated prompt.
  */
 const MAX_LINES_PER_SNIPPET = 8;
 
 /**
  * Heuristic detectors used to surface high-risk changes within the diff.
+ *
+ * Each entry contains:
+ * - `id`: a short identifier,
+ * - `description`: a human-friendly description used in reports,
+ * - `test`: a predicate executed for each added line and file path to determine a match.
+ *
+ * The regexes are deliberately broad to surface changes that commonly affect
+ * scalability, performance, or reliability (database queries, network calls,
+ * loops, CPU-bound work, concurrency constructs, etc.).
  */
 const HEURISTIC_CHECKS: Array<{
   id: string;
@@ -102,6 +171,14 @@ const HEURISTIC_CHECKS: Array<{
 
 /**
  * Analyses a unified diff to count added lines, extract snippets, and surface heuristics.
+ *
+ * The function scans a Git unified diff string line-by-line, registers files when
+ * it encounters `+++ ` headers, tracks hunk locations (`@@ ... @@`) and collects
+ * added lines (lines that start with `+`). For each added line it:
+ *  - increments the file's `addedLines` counter,
+ *  - appends the content to an open `Snippet` (subject to `MAX_LINES_PER_SNIPPET` and
+ *    `MAX_SNIPPETS_PER_FILE` limits),
+ *  - executes each `HEURISTIC_CHECKS` rule and records triggered heuristic descriptions.
  *
  * @param diff - Unified diff content, typically in Git format.
  * @returns Structured summary of the diff emphasising risky changes.
@@ -205,6 +282,10 @@ function analyseDiff(diff: string): AnalysisSummary {
 /**
  * Formats the analysis summary into markdown suitable for the prompting context.
  *
+ * The function produces a compact, human-readable representation of each analysed
+ * file, including the number of added lines, any triggered signals (heuristics),
+ * and snippet previews. Snippets are indented for readability.
+ *
  * @param summary - Aggregated diff summary to convert into human-readable text.
  * @returns Markdown string that highlights files, signals, and snippets.
  */
@@ -238,7 +319,9 @@ function buildHeuristicSummary(summary: AnalysisSummary): string {
 /**
  * Indents every line in the provided text by the specified number of spaces.
  *
- * @param text - The text block to indent.
+ * Useful for producing readable snippet blocks inside the heuristic summary.
+ *
+ * @param text - The text block to indent. Newlines are preserved.
  * @param spaces - Number of spaces to prefix each line with.
  * @returns The indented text block.
  */
@@ -253,7 +336,17 @@ function indentText(text: string, spaces: number): string {
 /**
  * Constructs the chat completion prompt for the OpenAI API.
  *
+ * The returned array is an ordered list of `OpenAIChatMessage` objects where the
+ * first entry is a `system` message establishing the assistant role and the
+ * second entry is a `user` message containing a detailed, structured prompt
+ * including the heuristic summary and the diff to analyse.
+ *
  * @param params - Prompt configuration, including language, traffic profile, and diff details.
+ * @param params.language - Primary stack or language focus (e.g., "TypeScript").
+ * @param params.trafficProfile - The traffic/load profile to model (e.g., "1k-100k requests per second").
+ * @param params.heuristicSummary - Summary produced by `buildHeuristicSummary`.
+ * @param params.diff - The unified diff text to include in the prompt; already truncated if necessary.
+ * @param params.truncated - `true` if the original diff was truncated prior to prompting.
  * @returns Ordered list of chat messages describing the task.
  */
 function buildPrompt(params: {
@@ -306,9 +399,14 @@ function buildPrompt(params: {
 /**
  * Retrieves the diff for a pull request using the provided Octokit client.
  *
- * @param octokit - Authenticated Octokit instance.
+ * The function uses the GitHub API to fetch details for a pull request and
+ * requests the response in unified-diff format by setting the `Accept` header
+ * to `application/vnd.github.v3.diff`.
+ *
+ * @param octokit - Authenticated Octokit instance returned by `github.getOctokit`.
  * @param pullNumber - Pull request number to fetch.
- * @returns Raw diff text returned by the GitHub API.
+ * @returns Raw diff text returned by the GitHub API as a string. Returns an
+ *          empty string if the API response does not contain textual data.
  */
 async function fetchPullRequestDiff(octokit: ReturnType<typeof github.getOctokit>, pullNumber: number) {
   const response = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
@@ -322,7 +420,16 @@ async function fetchPullRequestDiff(octokit: ReturnType<typeof github.getOctokit
 /**
  * Calls the OpenAI chat completions endpoint with the prepared prompt.
  *
+ * This wrapper adapts our `OpenAIChatMessage` format to the `ai` SDK's
+ * `generateText` helper and enforces a predictable error surface. The function
+ * will trim the returned text and throw an Error if no textual content is present.
+ *
  * @param params - Parameters required to invoke the OpenAI API.
+ * @param params.apiKey - API key used to construct the OpenAI client.
+ * @param params.model - Model identifier (for example "gpt-4o" or other model alias supported by your SDK).
+ * @param params.messages - An ordered set of chat messages (system + user).
+ * @param params.maxTokens - Maximum tokens to request from the model for the output.
+ * @param params.temperature - Sampling temperature between 0 and 1.
  * @returns Assistant response content trimmed for whitespace.
  * @throws If the API responds with a non-OK status or lacks textual content.
  */
@@ -365,7 +472,16 @@ async function callOpenAI(params: {
 /**
  * Builds the final markdown report that will be posted or surfaced in outputs.
  *
+ * The report contains a short header with repository and PR metadata followed by
+ * the model's content. If the diff was truncated, the header will include a
+ * note to that effect.
+ *
  * @param params - Report construction parameters including metadata and model output.
+ * @param params.pullNumber - Pull request number the report is for.
+ * @param params.repoFullName - The repository's "owner/repo" string.
+ * @param params.model - The model identifier used to produce the analysis.
+ * @param params.content - The textual content produced by the model (assumed to be Markdown).
+ * @param params.truncated - If `true` a "Diff truncated" note will be appended to the header.
  * @returns Markdown report summarising model findings.
  */
 function buildReport(params: {
@@ -383,6 +499,19 @@ function buildReport(params: {
 
 /**
  * Entrypoint for the GitHub Action that orchestrates diff retrieval, analysis, and reporting.
+ *
+ * Behaviour summary:
+ * 1. Validate that the action is running in the context of a pull request.
+ * 2. Read required inputs (github-token, openai-api-key) and optional configuration.
+ * 3. Fetch the PR diff using the GitHub REST API and request it in unified-diff format.
+ * 4. Truncate the diff if it exceeds `MAX_DIFF_CHARACTERS`.
+ * 5. Analyse the diff using `analyseDiff` and build a heuristic summary.
+ * 6. Construct a prompt and call the configured OpenAI model to obtain analysis.
+ * 7. Build a report, set it as an action output, optionally write to the job summary,
+ *    and optionally post the report as a PR comment.
+ *
+ * The function sets action outputs and marks the action as failed using `core.setFailed`
+ * for user-facing errors (such as missing inputs).
  */
 async function run(): Promise<void> {
   try {
@@ -505,4 +634,3 @@ async function run(): Promise<void> {
 }
 
 void run();
-
