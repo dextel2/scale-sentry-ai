@@ -1,6 +1,6 @@
 Here’s a rewritten and more engaging version of your markdown with relevant emojis added:
 
-```markdown
+
 # ⚠️ Known Issues
 
 This document tracks current limitations and rough edges contributors should be aware of.  
