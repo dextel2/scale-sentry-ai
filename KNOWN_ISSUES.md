@@ -38,6 +38,3 @@ This document tracks current limitations and rough edges contributors should be 
 Feel free to **file an issue** or **open a PR** if you have suggestions for addressing any of the above! 🚀
 ```
 
-I can also make a **more playful, “friendly AI assistant” version** with extra emojis and conversational tone if you want it to feel less formal.
-
-Do you want me to do that?
