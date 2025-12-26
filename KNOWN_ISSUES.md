@@ -36,5 +36,3 @@ This document tracks current limitations and rough edges contributors should be 
 ---
 
 Feel free to **file an issue** or **open a PR** if you have suggestions for addressing any of the above! 🚀
-```
-
